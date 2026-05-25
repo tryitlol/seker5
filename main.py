@@ -108,7 +108,7 @@ def _send_data_backup_to_admins(reason: str = "Shutdown"):
                     f"https://api.telegram.org/bot{_tok}/sendMessage",
                     data={"chat_id": _aid,
                           "text": (f"⚠️ <b>Bot {reason}</b> — Data Backup\n"
-                                   f"\n"
+                                   f"━━━━━━━━━━━━━━━━━━━━\n"
                                    f"Sending <b>{len(_files)}</b> file(s) from <code>data/</code>…"),
                           "parse_mode": "HTML"},
                     timeout=8)
@@ -414,7 +414,9 @@ def admin_or_mini_admin(perm: str):
                     " ".join(context.args) if context.args else "")
                 return await fn(update, context)
             await update.message.reply_text(
-                f"⛔ <b>Permission Required</b>\n\nYou currently do not have permission to use this feature.\nRequired: <code>{perm}</code>"
+                f"⛔ <b>Permission Denied</b>\n"
+                f"You need the <code>{perm}</code> permission.\n"
+                f"Contact admin for access.",
                 parse_mode=ParseMode.HTML)
         return wrapper
     return decorator
@@ -673,15 +675,15 @@ async def gate(update,context,require_key=True):
         ud,u=get_or_create_user(uid,tg.username or "",tg.first_name or ""); return True,ud,u
     ud,u=get_or_create_user(uid,tg.username or "",tg.first_name or "")
     if ud.get("banned"):
-        await update.effective_message.reply_text("🚫 <b>Access Restricted</b>\n\nYour account currently does not have access to this service.",parse_mode=ParseMode.HTML); return False,None,u
+        await update.effective_message.reply_text("🚫 You are <b>banned</b>.",parse_mode=ParseMode.HTML); return False,None,u
     if require_key:
         if not ud.get("activated"):
-            await update.effective_message.reply_text("🔑 <b>Activation Required</b>\n\nPlease activate your access key to continue.\n\nExample:\n<code>/redeem YOUR_KEY</code>",parse_mode=ParseMode.HTML); return False,None,u
+            await update.effective_message.reply_text("🔑 Use <code>/redeem YOUR_KEY</code>.",parse_mode=ParseMode.HTML); return False,None,u
         if check_key_expiry(uid):
-            await update.effective_message.reply_text("⏰ <b>Access Expired</b>\n\nYour subscription key has expired. Please contact an administrator to renew access.",parse_mode=ParseMode.HTML); return False,None,load_users()
+            await update.effective_message.reply_text("⏰ <b>Key Expired.</b> Contact admin.",parse_mode=ParseMode.HTML); return False,None,load_users()
     if cfg.get("locked") and not ud.get("vip"):
         await update.effective_message.reply_text(
-    "🔒 <b>Maintenance Mode</b>\n\nThe service is currently unavailable. Please try again later.",parse_mode=ParseMode.HTML); return False,None,u
+    "🔒 <b>Maintenance Mode Enabled</b>\n\nThe bot is temporarily unavailable.",parse_mode=ParseMode.HTML); return False,None,u
     return True,ud,u
 
 async def gate_cb(query,context):
@@ -691,17 +693,17 @@ async def gate_cb(query,context):
     ud,u=get_or_create_user(uid,tg.username or "",tg.first_name or "")
     if ud.get("banned"): await query.answer("🚫 Access Restricted",show_alert=True); return False,None,u
     if not ud.get("activated") and not is_admin(tg.id,cfg):
-        await query.answer("🔑 Activation required to continue.",show_alert=True); return False,None,u
-    if check_key_expiry(uid): await query.answer("⏰ Access expired. Please renew your key.",show_alert=True); return False,None,load_users()
+        await query.answer("🔑 Use /redeem KEY!",show_alert=True); return False,None,u
+    if check_key_expiry(uid): await query.answer("⏰ Key expired!",show_alert=True); return False,None,load_users()
     if load_config().get("locked") and not ud.get("vip"):
-        await query.answer("🔒 Service unavailable right now.",show_alert=True); return False,None,u
+        await query.answer("🔒 Bot locked!",show_alert=True); return False,None,u
     return True,ud,u
 
 def admin_only(fn):
     @wraps(fn)
     async def w(update,context):
         if not is_admin(update.effective_user.id,load_config()):
-            await update.message.reply_text("⛔ <b>Administrator Access Required</b>\n\nThis feature is only available to administrators.",parse_mode=ParseMode.HTML); return
+            await update.message.reply_text("⛔ Admin only."); return
         return await fn(update,context)
     return w
 
@@ -750,14 +752,14 @@ def stats_card(done, total, stats, ll="", cl="", result_folder=None):
 
 📦 {done:,} / {total:,}
 
-━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━
 ✅ Valid      : {valid:,}
 ❌ Invalid    : {invalid:,}
 ✨ Clean      : {clean:,}
 ⚠️ Not Clean  : {not_clean:,}
 🎮 Has CODM   : {codm:,}
 📭 No CODM    : {no_codm:,}
-━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━
 """
 
     # ── ORIGINAL WORKING LOGIC ─────────────────────────
@@ -786,7 +788,7 @@ def stats_card(done, total, stats, ll="", cl="", result_folder=None):
             if hits > 0:
 
                 # LEVELS
-                text += "\n📈 Level Distribution\n"
+                text += "\n📈 Level Distribution\n\n"
 
                 for rng, cnt in lvl.items():
                     pct2 = cnt / hits * 100
@@ -804,7 +806,8 @@ def stats_card(done, total, stats, ll="", cl="", result_folder=None):
                     )
 
                 # SERVERS
-                text += "\n🌏 Server Distribution\n"
+                text += "\n━━━━━━━━━━━━━━━━━━━\n"
+                text += "\n🌏 Server Distribution\n\n"
 
                 for country, cnt in list(ctr.items())[:6]:
                     pct3 = cnt / hits * 100
@@ -1436,9 +1439,9 @@ def run_checker(uid,combo_file,result_folder,limit,threads,stop_event,
             f"  📄 <code>{f}</code>  {e}/{a} errors ({int(e/a*100)}%)"
             for f,a,e in _warn)
         _warn_text = (
-            f"⚠️ <b>Proxy Warning</b>\n\n"
+            f"⚠️ <b>Proxy Warning</b>\n━━━━━━━━━━━━━━━━━━━━\n"
             f"High error rate detected during checking:\n\n"
-            f"{_warn_lines}\n\n"
+            f"{_warn_lines}\n━━━━━━━━━━━━━━━━━━━━\n"
             f"Errors: Connection aborted / Remote end closed\n"
             f"Use /removeproxy or /pasteproxy to replace."
         )
@@ -1478,58 +1481,131 @@ def run_checker(uid,combo_file,result_folder,limit,threads,stop_event,
 # ════════════════════════════════════════════
 #  DELIVER RESULTS
 # ════════════════════════════════════════════
-async def deliver_results(bot,chat_id,uid,zip_paths,stats,combo_file=None,note="",partial=False):
-    """Send results summary + zip(s).
-    zip_paths : Path | list[Path] | None
-    partial   : True = keep combo, label as partial and continue
-    After final delivery: silently backup to admin then delete result files.
+async def deliver_results(
+    bot,
+    chat_id,
+    uid,
+    zip_paths,
+    stats,
+    combo_file=None,
+    note="",
+    partial=False
+):
     """
-    icon  = "⏸" if partial else ("🛑" if note else "🏁")
-    label = "Partial Results" if partial else ("Stopped" if note else "Finished")
-    note_clean = ""  # don't show note in title (avoids "Stopped (Stopped)!")
-    t = stats.get("total",0)
-    clean_kb = InlineKeyboardMarkup([[InlineKeyboardButton("🗑 Delete All Bot Messages",callback_data="delete_all_msgs")]])
-    try:
-        m=await bot.send_message(chat_id=chat_id,parse_mode=ParseMode.HTML,reply_markup=clean_kb,
-            text=(f"{icon} <b>{label}!</b>\n\n"
-                  f"📊 Processed  : <code>{t:,}</code>\n\n"
-                  f"✅ Valid      : <code>{stats.get('valid',0):,}</code>\n"
-                  f"❌ Invalid    : <code>{stats.get('invalid',0):,}</code>\n"
-                  f"✨ Clean      : <code>{stats.get('clean',0):,}</code>\n"
-                  f"⚠️  Not Clean  : <code>{stats.get('not_clean',0):,}</code>\n"
-                  f"🎮 Has CODM   : <code>{stats.get('has_codm',0):,}</code>\n"
-                  f"📭 No CODM    : <code>{stats.get('no_codm',0):,}</code>\n"
-                  f"\n"
-                  f"{'📦 Partial — checking still continues! 👇' if partial else '⚡ Checking complete!'}"))
-        if m: track(uid,m.message_id)
-    except: pass
+    Send results summary + zip(s)
+    """
 
-    # Normalise to list
-    if zip_paths is None: zip_paths=[]
-    elif not isinstance(zip_paths,list): zip_paths=[zip_paths]
-    zip_paths=[Path(p) for p in zip_paths if p and Path(p).exists() and Path(p).stat().st_size>100]
+    icon = "⏸" if partial else ("🛑" if note else "🏁")
+    label = (
+        "Partial Results"
+        if partial
+        else ("Stopped" if note else "Finished")
+    )
+
+    clean_kb = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "🗑 Delete All Bot Messages",
+                callback_data="delete_all_msgs"
+            )
+        ]
+    ])
+
+    t = stats.get("total", 0)
+
+    result_text = f"""
+<pre>
+{icon} {label}!
+━━━━━━━━━━━━━━━━━━━━
+📊 Processed  : {t:,}
+━━━━━━━━━━━━━━━━━━━━
+✅ Valid      : {stats.get('valid',0):,}
+❌ Invalid    : {stats.get('invalid',0):,}
+✨ Clean      : {stats.get('clean',0):,}
+⚠️ Not Clean  : {stats.get('not_clean',0):,}
+🎮 Has CODM   : {stats.get('has_codm',0):,}
+📭 No CODM    : {stats.get('no_codm',0):,}
+━━━━━━━━━━━━━━━━━━━━
+{"📦 Partial — checking still continues!" if partial else "⚡ Checking complete!"}
+</pre>
+"""
+
+    try:
+        m = await bot.send_message(
+            chat_id=chat_id,
+            text=result_text,
+            parse_mode=ParseMode.HTML,
+            reply_markup=clean_kb
+        )
+
+        if m:
+            track(uid, m.message_id)
+
+    except Exception as e:
+        print(e)
+
+    # normalize zip list
+    if zip_paths is None:
+        zip_paths = []
+
+    elif not isinstance(zip_paths, list):
+        zip_paths = [zip_paths]
+
+    zip_paths = [
+        Path(p)
+        for p in zip_paths
+        if p and Path(p).exists()
+        and Path(p).stat().st_size > 100
+    ]
 
     if zip_paths:
-        total_parts=len(zip_paths)
-        for idx,zp in enumerate(zip_paths,1):
-            try:
-                if total_parts>1:
-                    cap=(f"📦 Part {idx}/{total_parts} — "
-                         f"{'checking still continues!' if partial else 'your results!'}")
-                else:
-                    cap="📦 Partial — new results will follow when ready!" if partial else "📦 Your results — enjoy!"
-                with open(zp,"rb") as f:
-                    dm=await bot.send_document(chat_id=chat_id,document=f,filename=zp.name,caption=cap)
-                if dm: track(uid,dm.message_id)
-            except Exception as e:
-                em=await bot.send_message(chat_id=chat_id,text=f"⚠️ Could not send {zp.name}: {e}")
-                if em: track(uid,em.message_id)
-    else:
-        if not partial:
-            nm=await bot.send_message(chat_id=chat_id,text="📭 No hit files (0 results).")
-            if nm: track(uid,nm.message_id)
 
-    if combo_file and not partial: del_combo(combo_file)
+        total_parts = len(zip_paths)
+
+        for idx, zp in enumerate(zip_paths, 1):
+
+            try:
+
+                caption = (
+                    f"📦 Part {idx}/{total_parts}"
+                    if total_parts > 1
+                    else "📦 Results"
+                )
+
+                with open(zp, "rb") as f:
+
+                    dm = await bot.send_document(
+                        chat_id=chat_id,
+                        document=f,
+                        filename=zp.name,
+                        caption=caption
+                    )
+
+                if dm:
+                    track(uid, dm.message_id)
+
+            except Exception as e:
+
+                em = await bot.send_message(
+                    chat_id=chat_id,
+                    text=f"⚠️ Could not send {zp.name}\n{e}"
+                )
+
+                if em:
+                    track(uid, em.message_id)
+
+    elif not partial:
+
+        nm = await bot.send_message(
+            chat_id=chat_id,
+            text="📭 No hit files (0 results)."
+        )
+
+        if nm:
+            track(uid, nm.message_id)
+
+    if combo_file and not partial:
+        del_combo(combo_file)
 
     # ── After final delivery: delete result folder ──
     if not partial:
@@ -1672,12 +1748,12 @@ async def _do_stop(update,context):
             ll=LEVEL_OPTIONS.get(lk,LEVEL_OPTIONS["lvl_all"])["label"]
             cl=CLEAN_OPTIONS.get(ck,CLEAN_OPTIONS["cf_both"])["label"]
             m=await update.message.reply_text(
-                f"⏸ <b>Pause or Stop?</b>\n\n"
+                f"⏸ <b>Pause or Stop?</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                 f"📊 Processed : <code>{processed:,}</code>\n"
                 f"📋 Remaining : <code>{rem:,}</code> lines\n"
                 f"⭐ Level     : {ll}\n"
                 f"🔍 Filter    : {cl}\n"
-                f"\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"Do you want to <b>continue</b> or <b>stop and get results</b>?",
                 reply_markup=cont_kb, parse_mode=ParseMode.HTML)
             if m: track(uid,m.message_id)
@@ -1709,7 +1785,7 @@ async def cmd_hits_on(update, context):
     save_users(users)
     await update.message.reply_text(
         "🔔 <b>Hit Notifications: ON</b>\n"
-        "\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
         "You will now receive a Telegram message for every hit found during checking.\n"
         "Use /hitsoff to turn them off.",
         parse_mode=ParseMode.HTML)
@@ -1725,7 +1801,7 @@ async def cmd_hits_off(update, context):
     save_users(users)
     await update.message.reply_text(
         "🔕 <b>Hit Notifications: OFF</b>\n"
-        "\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
         "You will no longer receive messages for each hit.\n"
         "Use /hitson to turn them back on.",
         parse_mode=ParseMode.HTML)
@@ -1764,9 +1840,9 @@ async def cmd_delete_file(update,context):
         if uid in active_sessions: del active_sessions[uid]
     names=", ".join(f"<code>{n}</code>" for n in deleted) if deleted else "file"
     await update.message.reply_text(
-        f"🗑 <b>File Deleted!</b>\n\n"
+        f"🗑 <b>File Deleted!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"Deleted: {names}\n"
-        f"\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
         f"You can now upload a new file via /start.",
         parse_mode=ParseMode.HTML)
 
@@ -1778,11 +1854,11 @@ async def cmd_status(update,context):
     lk=sess.get("lvl_key","lvl_all"); ck=sess.get("cf_key","cf_both")
     sm={"waiting_file":"⏳ Waiting for file","file_received":"📂 File received","checking":"⚡ Checking","done":"✅ Finished"}
     m=await update.message.reply_text(
-        f"📊 <b>Session Status</b>\n\n"
+        f"📊 <b>Session Status</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"🔄 Status : {sm.get(st,st)}\n📁 File   : <code>{fn}</code>\n"
         f"⭐ Level  : {LEVEL_OPTIONS.get(lk,LEVEL_OPTIONS['lvl_all'])['label']}\n"
         f"🔍 Filter : {CLEAN_OPTIONS.get(ck,CLEAN_OPTIONS['cf_both'])['label']}\n"
-        f"\n/stop — cancel  |  /cancel — same",
+        f"━━━━━━━━━━━━━━━━━━━━\n/stop — cancel  |  /cancel — same",
         parse_mode=ParseMode.HTML)
     if m: track(uid,m.message_id)
 
@@ -1862,7 +1938,7 @@ async def cmd_myresultsfile(update,context):
     if not sess or sess.get("status")!="checking":
         m=await update.message.reply_text(
             "📭 <b>No active checking session.</b>\n"
-            "\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
             "Start a session first via /start, then use /myresultsfile "
             "anytime during checking to get a snapshot of your current hits.",
             parse_mode=ParseMode.HTML)
@@ -1908,11 +1984,12 @@ async def cmd_myresultsfile(update,context):
 
     try:
         nm=await update.message.reply_text(
-            f"📸 <b>Results Snapshot</b>\n\n"
+            f"📸 <b>Results Snapshot</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
             f"🎮 Hits (CODM) : <code>{hits:,}</code>\n"
             f"✨ Clean       : <code>{clean:,}</code>\n"
             f"📊 Processed   : <code>{processed:,}</code>\n"
-            f"\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
             f"⚡ Checking is still running! /check for live stats.",
             parse_mode=ParseMode.HTML)
         if nm: track(uid,nm.message_id)
@@ -1983,7 +2060,7 @@ async def on_callback(update,context):
         # Actually set the stop event to interrupt current run
         s2.get("stop_event",threading.Event()).set()
         await query.edit_message_text(
-            "▶️ <b>Continuing!</b>\n\n"
+            "▶️ <b>Continuing!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
             "Partial results will be sent now, then checking continues automatically.\n"
             "📊 /check  ⏹ /stop",
             parse_mode=ParseMode.HTML)
@@ -2033,7 +2110,7 @@ async def on_callback(update,context):
                 vt2="👑" if ud2.get("vip") else "👤"
                 btns2.append([InlineKeyboardButton(f"⛔ {vt2} {fn2} @{un2}",callback_data=f"admstop_uid_{u2}")])
             btns2.append([InlineKeyboardButton("« Back",callback_data="admstop_back")])
-            await query.edit_message_text("⛔ <b>Stop One User</b>\n\nChoose:",
+            await query.edit_message_text("⛔ <b>Stop One User</b>\n━━━━━━━━━━━━━━━━━━━━\nChoose:",
                 reply_markup=InlineKeyboardMarkup(btns2),parse_mode=ParseMode.HTML)
             return
         if data.startswith("admstop_uid_"):
@@ -2056,7 +2133,7 @@ async def on_callback(update,context):
                 [InlineKeyboardButton(f"🎯 Stop One User…",                callback_data="admstop_oneuser")],
             ])
             await query.edit_message_text(
-                f"⛔ <b>Stop Checking</b>\n\n"
+                f"⛔ <b>Stop Checking</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                 f"⚡ Running: <code>{len(running2)}</code>",
                 reply_markup=kb_b,parse_mode=ParseMode.HTML)
             return
@@ -2085,7 +2162,7 @@ async def on_callback(update,context):
                 ud3=users_db4.get(u2,{}); fn3=ud3.get("first_name","?"); un3=ud3.get("username","?")
                 vt3="👑" if ud3.get("vip") else "👤"
                 btns3.append([InlineKeyboardButton(f"▶️ {vt3} {fn3} @{un3}",callback_data=f"admcont_uid_{u2}")])
-            await query.edit_message_text("▶️ <b>Continue One User</b>\n\nChoose:",
+            await query.edit_message_text("▶️ <b>Continue One User</b>\n━━━━━━━━━━━━━━━━━━━━\nChoose:",
                 reply_markup=InlineKeyboardMarkup(btns3),parse_mode=ParseMode.HTML)
             return
         if data.startswith("admcont_uid_"):
@@ -2199,13 +2276,13 @@ async def on_callback(update,context):
                 [InlineKeyboardButton("« Back",callback_data="chkprx_back_")],
             ])
             await query.edit_message_text(
-                f"📄 <b>{fname_cb}</b>  ·  <code>{total_cb:,}</code> proxies\n\nChoose check mode:",
+                f"📄 <b>{fname_cb}</b>  ·  <code>{total_cb:,}</code> proxies\n━━━━━━━━━━━━━━━━━━━━\nChoose check mode:",
                 reply_markup=kb,parse_mode=ParseMode.HTML)
             return
 
         if action=="back":
             pf_cb=sorted(PROXY_DIR.glob("*.txt")); btns_cb=[]
-            lines_cb=["📡 <b>Proxy Files</b>\n"]
+            lines_cb=["📡 <b>Proxy Files</b>\n━━━━━━━━━━━━━━━━━━━━"]
             for p in pf_cb:
                 try:
                     with open(p,"r",encoding="utf-8",errors="ignore") as f:
@@ -2226,7 +2303,7 @@ async def on_callback(update,context):
                 active_sessions[uid]["awaiting_proxy_line"]=fname_cb
                 active_sessions[uid]["awaiting_proxy_line_total"]=total_cb2
             await query.edit_message_text(
-                f"🔢 <b>Enter Line Number</b>\n\n"
+                f"🔢 <b>Enter Line Number</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                 f"File: <code>{fname_cb}</code>  ·  <code>{total_cb2:,}</code> proxies\n"
                 f"Send a number (1–{total_cb2:,}) to check that proxy line.",
                 parse_mode=ParseMode.HTML)
@@ -2260,7 +2337,7 @@ async def on_callback(update,context):
             with open(fpath_cb,"w",encoding="utf-8") as f:
                 for ln in working_cb: f.write(ln+"\n")
             await query.edit_message_text(
-                f"✅ <b>Dead & Error Lines Removed!</b>\n\n"
+                f"✅ <b>Dead & Error Lines Removed!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                 f"📄 <code>{fname_cb}</code>\n"
                 f"✅ Kept    : <code>{len(working_cb):,}</code> working\n"
                 f"🗑 Removed : <code>{dead_cb_n:,}</code> dead/error lines",
@@ -2307,10 +2384,10 @@ async def on_callback(update,context):
                     file_lines.append(f"❌ <code>{pf_all.name}</code>  error: {e}")
             summary=("\n".join(file_lines))
             await query.edit_message_text(
-                f"✅ <b>All Files Cleaned!</b>\n\n"
+                f"✅ <b>All Files Cleaned!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                 f"🗑 Total removed : <code>{total_removed:,}</code> dead/error lines\n"
                 f"✅ Total kept    : <code>{total_kept:,}</code> working\n"
-                f"\n{summary}",
+                f"━━━━━━━━━━━━━━━━━━━━\n{summary}",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("« Back to Proxy",callback_data="adm_proxy")]]),
                 parse_mode=ParseMode.HTML)
             return
@@ -2336,8 +2413,8 @@ async def on_callback(update,context):
                     res_s.append(f"{label} Line {all_cb.index(ln)+1}: <code>{ln[:50]}</code>")
                 wk=sum(1 for r in res_s if r.startswith("✅"))
                 out_s=(f"{'✅' if wk==len(sample) else ('⚠️' if wk>0 else '❌')} <b>{fname_cb}</b> — {wk}/{len(sample)} working\n"
-                       f"\n"+"\n".join(res_s))
-                if wk==0: out_s+="\n\n⚠️ All sampled dead/error. Use Check ALL to verify."
+                       f"━━━━━━━━━━━━━━━━━━━━\n"+"\n".join(res_s))
+                if wk==0: out_s+="\n━━━━━━━━━━━━━━━━━━━━\n⚠️ All sampled dead/error. Use Check ALL to verify."
                 kb_s=InlineKeyboardMarkup([[InlineKeyboardButton("« Back",callback_data=f"chkprx_menu_{fname_cb}")]])
                 try: await query.edit_message_text(out_s,reply_markup=kb_s,parse_mode=ParseMode.HTML)
                 except: pass
@@ -2360,7 +2437,7 @@ async def on_callback(update,context):
                 tok=len(working_a); pct=int(tok/total_cb*100) if total_cb else 0
                 out_lines=[
                     f"{'✅' if pct>=80 else '⚠️'} <b>{fname_cb}</b> — {tok}/{total_cb} working ({pct}%)",
-                    f"",
+                    f"━━━━━━━━━━━━━━━━━━━━",
                     f"✅ Working : <code>{tok:,}</code>",
                     f"❌ Dead/Error : <code>{len(dead_a):,}</code>",
                 ]
@@ -2371,10 +2448,10 @@ async def on_callback(update,context):
                     if err_ctr:
                         err_summary=", ".join(f"{v}x {k}" for k,v in err_ctr.most_common(4))
                         out_lines.append(f"⚠️ Errors: {err_summary}")
-                    out_lines.append("")
+                    out_lines.append("━━━━━━━━━━━━━━━━━━━━")
                     dp="\n".join(f"  ❌ Line {i}: <code>{ln[:45]}</code> — {err_r}" for i,ln,err_r in dead_a[:15])
                     if len(dead_a)>15: dp+=f"\n  … and {len(dead_a)-15} more dead/error lines"
-                    out_lines+=["<b>Dead / Error proxies:</b>",dp,""]
+                    out_lines+=["<b>Dead / Error proxies:</b>",dp,"━━━━━━━━━━━━━━━━━━━━"]
                     kb_a=InlineKeyboardMarkup([
                         [InlineKeyboardButton(f"🗑 Remove {len(dead_a):,} dead/error lines (this file)",
                                              callback_data=f"chkprx_rmdeadlines_{fname_cb}")],
@@ -2467,12 +2544,12 @@ async def on_callback(update,context):
                         tp2+=sum(1 for ln in fh if ln.strip() and not ln.strip().startswith("#"))
                 except: pass
             await query.edit_message_text(
-                f"📊 <b>Statistics</b>\n\n"
+                f"📊 <b>Statistics</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                 f"👥 Total Users   : <code>{tu}</code>\n"
                 f"✅ Activated     : <code>{au}</code>\n"
                 f"🚫 Banned        : <code>{bu}</code>\n"
                 f"👑 VIP           : <code>{vu}</code>\n"
-                f"\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"⚡ Running       : <code>{live2}/{MAX_CONCURRENT_CHECKERS}</code>\n"
                 f"📋 Total checked : <code>{tc:,}</code>\n"
                 f"🔑 Keys total    : <code>{len(keys2)}</code>\n"
@@ -2492,7 +2569,7 @@ async def on_callback(update,context):
                     "📭 <b>No active sessions</b>",
                     reply_markup=InlineKeyboardMarkup(BACK), parse_mode=ParseMode.HTML)
                 return
-            lines2=[f"⚡ <b>Running ({len(running2)})</b>\n"]
+            lines2=[f"⚡ <b>Running ({len(running2)})</b>\n━━━━━━━━━━━━━━━━━━━━"]
             for u2,s2 in running2:
                 ud2=users2.get(u2,{}); fn2=ud2.get("first_name","?"); un2=ud2.get("username","?")
                 combo2=Path(s2.get("file","")).name if s2.get("file") else "N/A"
@@ -2514,7 +2591,7 @@ async def on_callback(update,context):
         # ── Keys sub-menu ─────────────────────────────────────────────────
         if data=="adm_keys":
             await _adm_edit(query,
-                "🔑 <b>Keys</b>\n\n"
+                "🔑 <b>Keys</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                 "Tap to generate a key or remove keys.",
                 _admin_keys_kb())
             return
@@ -2531,8 +2608,8 @@ async def on_callback(update,context):
             save_keys(keys3)
             await query.answer("✅ Key generated!")
             await query.edit_message_text(
-                f"🔑 <b>Key Generated!</b>\n\n"
-                f"<code>{key3}</code>\n\n"
+                f"🔑 <b>Key Generated!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
+                f"<code>{key3}</code>\n━━━━━━━━━━━━━━━━━━━━\n"
                 f"⏱ Duration : <b>{dd3}</b>\n"
                 f"📅 Expires  : {fmt_expiry(exp3)}\n"
                 f"👥 Max users: <code>{mu3}</code>",
@@ -2546,7 +2623,7 @@ async def on_callback(update,context):
         # ── Users sub-menu ────────────────────────────────────────────────
         if data=="adm_users":
             await _adm_edit(query,
-                "👥 <b>Users</b>\n\nManage users:",
+                "👥 <b>Users</b>\n━━━━━━━━━━━━━━━━━━━━\nManage users:",
                 _admin_users_kb())
             return
 
@@ -2582,7 +2659,7 @@ async def on_callback(update,context):
             ac3=sum(1 for u in users3.values() if u.get("activated"))
             bc3=sum(1 for u in users3.values() if u.get("banned"))
             vc3=sum(1 for u in users3.values() if u.get("vip"))
-            lines3=[f"👥 <b>Users ({len(users3)})</b>  ✅{ac3}  🚫{bc3}  👑{vc3}\n"]
+            lines3=[f"👥 <b>Users ({len(users3)})</b>  ✅{ac3}  🚫{bc3}  👑{vc3}\n━━━━━━━━━━━━━━━━━━━━"]
             for uid3,u3 in sorted(users3.items(),key=lambda x:x[1].get("joined",""),reverse=True):
                 st3="🚫" if u3.get("banned") else ("👑" if u3.get("vip") else ("✅" if u3.get("activated") else "⏳"))
                 lines3.append(f"{st3} <code>{uid3}</code> @{u3.get('username','?')}  {u3.get('total_checked',0):,} checked")
@@ -2600,7 +2677,7 @@ async def on_callback(update,context):
                         tp4+=sum(1 for ln in fh if ln.strip() and not ln.strip().startswith("#"))
                 except: pass
             await _adm_edit(query,
-                f"📡 <b>Proxy</b>\n\n"
+                f"📡 <b>Proxy</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                 f"Files: <code>{len(pf4)}</code>  ·  Proxies: <code>{tp4:,}</code>",
                 _admin_proxy_kb())
             return
@@ -2618,7 +2695,7 @@ async def on_callback(update,context):
             uid5=str(tg.id)
             with sessions_lock: active_sessions.setdefault(uid5,{}); active_sessions[uid5]["awaiting_proxy_paste"]=True
             await query.edit_message_text(
-                "📋 <b>Paste Proxies</b>\n\n"
+                "📋 <b>Paste Proxies</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                 "Paste your proxy lines now (one per line).\n<code>host:port</code> or <code>host:port:user:pass</code>",
                 reply_markup=InlineKeyboardMarkup(BACK), parse_mode=ParseMode.HTML)
             return
@@ -2627,7 +2704,7 @@ async def on_callback(update,context):
             pf6=sorted(PROXY_DIR.glob("*.txt"))
             if not pf6:
                 await query.edit_message_text("📭 No proxy files.",reply_markup=InlineKeyboardMarkup(BACK),parse_mode=ParseMode.HTML); return
-            lines6=["📡 <b>Proxy Files</b>\n"]
+            lines6=["📡 <b>Proxy Files</b>\n━━━━━━━━━━━━━━━━━━━━"]
             tot6=0
             for p6 in pf6:
                 try:
@@ -2636,7 +2713,7 @@ async def on_callback(update,context):
                     sz6=p6.stat().st_size; ss6=f"{sz6/1024:.1f}KB" if sz6<1024*1024 else f"{sz6/1024/1024:.1f}MB"
                     tot6+=cnt6; lines6.append(f"📄 <code>{p6.name}</code>  {cnt6:,}  {ss6}")
                 except: lines6.append(f"📄 <code>{p6.name}</code>  ⚠️")
-            lines6.append(f"\n🔢 Total: <code>{tot6:,}</code>")
+            lines6.append(f"━━━━━━━━━━━━━━━━━━━━\n🔢 Total: <code>{tot6:,}</code>")
             await query.edit_message_text("\n".join(lines6),reply_markup=InlineKeyboardMarkup(BACK),parse_mode=ParseMode.HTML)
             return
 
@@ -2654,7 +2731,7 @@ async def on_callback(update,context):
         if data=="adm_settings":
             cfg5=load_config()
             await _adm_edit(query,
-                f"⚙️ <b>Settings</b>\n\n"
+                f"⚙️ <b>Settings</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                 f"🧵 Threads    : <code>{cfg5.get('default_threads',5)}</code>\n"
                 f"⚡ Concurrent : <code>{cfg5.get('max_concurrent',5)}</code>\n"
                 f"📊 Limit      : <code>{cfg5.get('global_limit') or 'Unlimited'}</code>\n"
@@ -2675,7 +2752,7 @@ async def on_callback(update,context):
         # ── Files sub-menu ────────────────────────────────────────────────
         if data=="adm_files":
             await _adm_edit(query,
-                "📁 <b>Files & Results</b>\n\nChoose action:",
+                "📁 <b>Files & Results</b>\n━━━━━━━━━━━━━━━━━━━━\nChoose action:",
                 _admin_files_kb())
             return
 
@@ -2743,8 +2820,8 @@ async def on_callback(update,context):
             save_keys(keys_db)
             await query.answer("✅ Key generated!")
             await _adm_edit(query,
-                f"🔑 <b>Key Generated!</b>\n\n"
-                f"<code>{key}</code>\n\n"
+                f"🔑 <b>Key Generated!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
+                f"<code>{key}</code>\n━━━━━━━━━━━━━━━━━━━━\n"
                 f"⏱ Duration : <b>{dd}</b>\n"
                 f"📅 Expires  : {fmt_expiry(exp)}\n"
                 f"👥 Max users: <code>{mu}</code>",
@@ -2791,7 +2868,7 @@ async def on_callback(update,context):
             uid_a=str(tg.id)
             with sessions_lock: active_sessions.setdefault(uid_a,{}); active_sessions[uid_a]["awaiting_proxy_paste"]=True
             await _adm_edit(query,
-                "📋 <b>Paste Proxies</b>\n\n"
+                "📋 <b>Paste Proxies</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                 "Paste your proxy lines now (one per line).\n<code>host:port</code> or <code>host:port:user:pass</code>",
                 InlineKeyboardMarkup([[InlineKeyboardButton("« Back",callback_data="adm_proxy")]]))
             return
@@ -2809,7 +2886,7 @@ async def on_callback(update,context):
                         tp_r+=sum(1 for ln in fh if ln.strip() and not ln.strip().startswith("#"))
                 except: pass
             await _adm_edit(query,
-                f"📡 <b>Proxy</b>\n\n"
+                f"📡 <b>Proxy</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                 f"Files: <code>{len(pf_r)}</code>  ·  Proxies: <code>{tp_r:,}</code>\n✅ Rotator reloaded!",
                 _admin_proxy_kb())
             return
@@ -2834,7 +2911,7 @@ async def on_callback(update,context):
             except: pass
             await query.answer("🔄 Config reloaded!")
             await _adm_edit(query,
-                f"⚙️ <b>Settings</b>\n\n"
+                f"⚙️ <b>Settings</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                 f"🧵 Threads    : <code>{cfg_r.get('default_threads',5)}</code>\n"
                 f"⚡ Concurrent : <code>{cfg_r.get('max_concurrent',5)}</code>\n"
                 f"📊 Limit      : <code>{cfg_r.get('global_limit') or 'Unlimited'}</code>\n"
@@ -2918,9 +2995,9 @@ async def on_callback(update,context):
             if uid in active_sessions: del active_sessions[uid]
         names2=", ".join(f"<code>{n}</code>" for n in deleted2) if deleted2 else "your file"
         await query.edit_message_text(
-            f"🗑 <b>File Deleted!</b>\n\n"
+            f"🗑 <b>File Deleted!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
             f"Deleted: {names2}\n"
-            f"\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
             f"You can now upload a new file via /start.",
             parse_mode=ParseMode.HTML)
         return
@@ -2946,7 +3023,7 @@ async def on_callback(update,context):
             active_sessions[uid]["stop_event"]=threading.Event()
             active_sessions[uid]["status"]="file_received"
         await query.edit_message_text(
-            f"✅ <b>Session Restored!</b>\n\n"
+            f"✅ <b>Session Restored!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
             f"📁 File: <code>{Path(s2['file']).name}</code>\n"
             f"⚙️ Configure or start below:",
             reply_markup=kb_settings(uid), parse_mode=ParseMode.HTML)
@@ -2983,7 +3060,7 @@ async def on_callback(update,context):
             rem=sorted(PROXY_DIR.glob("*.txt"))
             if not rem:
                 await query.edit_message_text("✅ <b>Deleted!</b>\n📭 No more proxy files.",parse_mode=ParseMode.HTML); return
-            lines=["📡 <b>Proxy Files</b> — tap to delete:\n"]
+            lines=["📡 <b>Proxy Files</b> — tap to delete:\n━━━━━━━━━━━━━━━━━━━━"]
             btns=[]
             for pf in rem:
                 try:
@@ -2994,7 +3071,7 @@ async def on_callback(update,context):
                 except: lines.append(f"📄 <code>{pf.name}</code>  ⚠️ unreadable")
                 btns.append([InlineKeyboardButton(f"🗑 Delete  {pf.name}",callback_data=f"delproxy_{pf.name}")])
             btns.append([InlineKeyboardButton("🗑🗑 Delete ALL proxy files",callback_data="delproxy_ALL")])
-            lines.append(f"\nTotal: <code>{len(rem)}</code> file(s)")
+            lines.append(f"━━━━━━━━━━━━━━━━━━━━\nTotal: <code>{len(rem)}</code> file(s)")
             await query.edit_message_text("\n".join(lines),reply_markup=InlineKeyboardMarkup(btns),parse_mode=ParseMode.HTML)
         except Exception as e: await query.answer(f"❌ {e}",show_alert=True)
         return
@@ -3011,12 +3088,12 @@ async def on_callback(update,context):
             active_sessions[uid]={"status":"waiting_file","file":None,"stop_event":threading.Event(),
                                    "lvl_key":"lvl_all","cf_key":"cf_both","chat_id":query.message.chat_id}
         m=await query.edit_message_text(
-            "📂 <b>Send Your Combo File</b>\n\n"
+            "📂 <b>Send Your Combo File</b>\n━━━━━━━━━━━━━━━━━━━━\n"
             "📌 Send a <code>.txt</code> file. Supported formats:\n"
             "<code>email:password</code>\n"
             "<code>user:pass</code>\n"
             "<code>https://sso.garena.com/ui/register:user:pass</code>\n"
-            "\n⏳ Waiting for your file…",
+            "━━━━━━━━━━━━━━━━━━━━\n⏳ Waiting for your file…",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📁 I haven't sent it yet",callback_data="remind_file")]]),
             parse_mode=ParseMode.HTML)
         if m: track(uid,m.message_id)
@@ -3106,10 +3183,10 @@ async def on_callback(update,context):
 
         _hits_label = "🔔 Hits: ON" if _hits_on else "🔕 Hits: OFF (/hitson to enable)"
         smsg=await query.edit_message_text(
-            f"⚡ <b>Checker Started!</b>\n\n"
+            f"⚡ <b>Checker Started!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
             f"📊 Lines   : <code>{disp:,}</code>\n🧵 Threads : <code>{threads}</code>\n"
             f"⭐ Level   : <b>{ll}</b>\n🔍 Filter  : <b>{cl}</b>\n"
-            f"\n{_hits_label}\n📊 /check  ⏹ /stop",
+            f"━━━━━━━━━━━━━━━━━━━━\n{_hits_label}\n📊 /check  ⏹ /stop",
             parse_mode=ParseMode.HTML)
         if smsg: track(uid,smsg.message_id)
         loop=asyncio.get_event_loop()
@@ -3191,10 +3268,10 @@ async def on_callback(update,context):
             try:
                 asyncio.run_coroutine_threadsafe(context.bot.edit_message_text(
                     chat_id=cid,message_id=smsg.message_id,
-                    text=(f"⚡ <b>Checker Running!</b>\n\n"
+                    text=(f"⚡ <b>Checker Running!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                           f"📊 Lines   : <code>{disp:,}</code>\n🧵 Threads : <code>{threads}</code>\n"
                           f"⭐ Level   : <b>{ll}</b>\n🔍 Filter  : <b>{cl}</b>\n"
-                          f"\n🎯 Hits sent here live!\n📊 /check  ⏹ /stop"),
+                          f"━━━━━━━━━━━━━━━━━━━━\n🎯 Hits sent here live!\n📊 /check  ⏹ /stop"),
                     parse_mode=ParseMode.HTML),loop)
             except: pass
             try:
@@ -3204,7 +3281,7 @@ async def on_callback(update,context):
                         context.bot.send_message(
                             chat_id=cid,
                             text=(f"❌ <b>Checker Unavailable</b>\n"
-                                  f"\n"
+                                  f"━━━━━━━━━━━━━━━━━━━━\n"
                                   f"The checker module failed to load.\n"
                                   f"<code>{CHECKER_ERR[:300]}</code>\n\n"
                                   f"Contact admin to fix the deployment."),
@@ -3217,7 +3294,7 @@ async def on_callback(update,context):
                         context.bot.send_message(
                             chat_id=cid,
                             text=(f"❌ <b>Checker Error</b>\n"
-                                  f"\n"
+                                  f"━━━━━━━━━━━━━━━━━━━━\n"
                                   f"<code>{st['error'][:400]}</code>"),
                             parse_mode=ParseMode.HTML), loop)
                     return
@@ -3366,13 +3443,13 @@ async def on_text(update,context):
     all_pf=sorted(PROXY_DIR.glob("*.txt"))
     fl="\n".join(f"  📄 <code>{p.name}</code>" for p in all_pf) or "  (none)"
     await update.message.reply_text(
-        f"✅ <b>Proxies Saved!</b>\n\n"
+        f"✅ <b>Proxies Saved!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"📄 File    : <code>{fname}</code>\n"
         f"✅ Saved   : <code>{len(valid):,}</code> proxies\n"
         f"❌ Skipped : <code>{invalid}</code> invalid lines\n"
-        f"\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
         f"{reload_str}\n"
-        f"\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
         f"<b>All proxy files:</b>\n{fl}",
         parse_mode=ParseMode.HTML)
 
@@ -3473,12 +3550,12 @@ async def on_document(update,context):
                             else f"{len(new_data):,} items" if isinstance(new_data, list)
                             else "loaded OK")
                 await w.edit_text(
-                    f"✅ <b>File Replaced!</b>\n\n"
+                    f"✅ <b>File Replaced!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                     f"📄 File   : <code>{target_fname}</code>\n"
                     f"📦 Size   : <code>{new_size/1024:.1f} KB</code>\n"
                     f"🔢 Content: <code>{key_info}</code>\n"
                     f"💾 Backup : <code>{target_fname}.bak</code> saved\n"
-                    f"\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n"
                     f"⚠️ Use /reloadbot to apply changes.",
                     parse_mode=ParseMode.HTML)
             except json.JSONDecodeError as je:
@@ -3522,9 +3599,9 @@ async def on_document(update,context):
             except: pass
             pf=sorted(PROXY_DIR.glob("*.txt")); fl="\n".join(f"  📄 <code>{p.name}</code>" for p in pf) or "  (none)"
             await update.message.reply_text(
-                f"✅ <b>Proxy File Uploaded!</b>\n\n"
+                f"✅ <b>Proxy File Uploaded!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                 f"📄 File    : <code>{doc.file_name}</code>\n✅ Valid   : <code>{v:,}</code> proxies\n"
-                f"❌ Skipped : <code>{i:,}</code>\n\n<b>All proxy files:</b>\n{fl}",
+                f"❌ Skipped : <code>{i:,}</code>\n━━━━━━━━━━━━━━━━━━━━\n<b>All proxy files:</b>\n{fl}",
                 parse_mode=ParseMode.HTML)
             return
 
@@ -3543,10 +3620,10 @@ async def on_document(update,context):
     if doc_size > FILE_SIZE_LIMIT_BYTES:
         size_mb = doc_size / 1024 / 1024
         await update.message.reply_text(
-            f"❌ <b>File Too Large!</b>\n\n"
+            f"❌ <b>File Too Large!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
             f"📦 Your file : <code>{size_mb:.1f} MB</code>\n"
             f"📏 Max allowed: <code>{FILE_SIZE_LIMIT_MB} MB</code>\n"
-            f"\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
             f"⚠️ Please split your combo file into smaller parts and upload them separately.\n"
             f"This limit applies to all users to ensure the checker can process every line properly.",
             parse_mode=ParseMode.HTML)
@@ -3569,9 +3646,9 @@ async def on_document(update,context):
             InlineKeyboardButton("🗑 Delete My File",callback_data="user_delete_file")
         ]])
         await update.message.reply_text(
-            f"⚠️ <b>You already have a file!</b>\n\n"
+            f"⚠️ <b>You already have a file!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
             f"📁 <code>{existing_name}</code>\n"
-            f"\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
             f"{status_txt}",
             reply_markup=del_kb if cur_status!="checking" else None,
             parse_mode=ParseMode.HTML)
@@ -3608,9 +3685,9 @@ async def on_document(update,context):
     try: await w.delete()
     except: pass
     m2=await update.message.reply_text(
-        f"✅ <b>File Received!</b>\n\n"
+        f"✅ <b>File Received!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"📁 File  : <code>{doc.file_name}</code>\n📊 Lines : <code>{clean:,}</code>{dn}{ln}\n"
-        f"\n⚙️ Configure settings below:",
+        f"━━━━━━━━━━━━━━━━━━━━\n⚙️ Configure settings below:",
         reply_markup=kb_settings(uid),parse_mode=ParseMode.HTML)
     if m2: track(uid,m2.message_id)
 
@@ -3643,7 +3720,7 @@ async def cmd_generate_key(update,context):
                "created_at":datetime.now().isoformat(),"created_by":update.effective_user.id}
     save_keys(keys)
     await update.message.reply_text(
-        f"🔑 <b>Key Generated!</b>\n\n<code>{key}</code>\n\n"
+        f"🔑 <b>Key Generated!</b>\n━━━━━━━━━━━━━━━━━━━━\n<code>{key}</code>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"⏱ Duration : <b>{dd}</b>\n📅 Expires  : {fmt_expiry(exp)}\n👥 Max users: <code>{mu}</code>",
         parse_mode=ParseMode.HTML)
 
@@ -3678,7 +3755,7 @@ async def cmd_reseller_gen_key(update, context):
     uid_str = str(update.effective_user.id)
     reseller_log_key(uid_str, key, dt, dv, mu, exp)
     await update.message.reply_text(
-        f"🔑 <b>Key Generated!</b>\n\n<code>{key}</code>\n\n"
+        f"🔑 <b>Key Generated!</b>\n━━━━━━━━━━━━━━━━━━━━\n<code>{key}</code>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"⏱ Duration : <b>{dd}</b>\n📅 Expires  : {fmt_expiry(exp)}\n👥 Max users: <code>{mu}</code>",
         parse_mode=ParseMode.HTML)
 
@@ -3819,7 +3896,7 @@ async def cmd_stop_all_checking(update, context):
         await update.message.reply_text("📭 No active sessions to stop.", parse_mode=ParseMode.HTML); return
     kb = InlineKeyboardMarkup([[InlineKeyboardButton("▶️ Continue All", callback_data="admin_continue_all")]])
     await update.message.reply_text(
-        f"⏸ <b>Stopped {len(stopped)} session(s):</b>\n\n"
+        f"⏸ <b>Stopped {len(stopped)} session(s):</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         + "\n".join(stopped),
         reply_markup=kb, parse_mode=ParseMode.HTML)
 
@@ -3836,7 +3913,7 @@ async def cmd_continue_all_checking(update, context):
     if not continued:
         await update.message.reply_text("📭 No stopped sessions to continue.", parse_mode=ParseMode.HTML); return
     await update.message.reply_text(
-        f"▶️ <b>Continued {len(continued)} session(s):</b>\n\n"
+        f"▶️ <b>Continued {len(continued)} session(s):</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         + "\n".join(continued), parse_mode=ParseMode.HTML)
 
 
@@ -3856,7 +3933,7 @@ async def cmd_stop_for_vip(update, context):
         await update.message.reply_text("📭 No VIP sessions running.", parse_mode=ParseMode.HTML); return
     kb = InlineKeyboardMarkup([[InlineKeyboardButton("▶️ Continue VIP", callback_data="admin_continue_vip")]])
     await update.message.reply_text(
-        f"⏸ <b>Stopped {len(stopped)} VIP session(s):</b>\n\n"
+        f"⏸ <b>Stopped {len(stopped)} VIP session(s):</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         + "\n".join(stopped), reply_markup=kb, parse_mode=ParseMode.HTML)
 
 
@@ -3876,7 +3953,7 @@ async def cmd_stop_for_nonvip(update, context):
         await update.message.reply_text("📭 No non-VIP sessions running.", parse_mode=ParseMode.HTML); return
     kb = InlineKeyboardMarkup([[InlineKeyboardButton("▶️ Continue Non-VIP", callback_data="admin_continue_nonvip")]])
     await update.message.reply_text(
-        f"⏸ <b>Stopped {len(stopped)} non-VIP session(s):</b>\n\n"
+        f"⏸ <b>Stopped {len(stopped)} non-VIP session(s):</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         + "\n".join(stopped), reply_markup=kb, parse_mode=ParseMode.HTML)
 
 
@@ -3921,7 +3998,7 @@ async def cmd_stop_for_user(update, context):
     if not running and not paused:
         await update.message.reply_text("📭 No active or paused sessions.", parse_mode=ParseMode.HTML); return
 
-    lines = ["👥 <b>Sessions</b>\n"]
+    lines = ["👥 <b>Sessions</b>\n━━━━━━━━━━━━━━━━━━━━"]
     btns = []
     for uid2, s in running:
         udata = users_db.get(uid2, {})
@@ -3999,7 +4076,7 @@ async def cmd_mini_admin_panel(update, context):
     if len(context.args) < 1:
         perm_list="\n".join(f"  <code>{k}</code> — {d}" for k,d in MINI_ADMIN_PERMISSIONS)
         await update.message.reply_text(
-            f"🛡 <b>Mini Admin Panel</b>\n\n"
+            f"🛡 <b>Mini Admin Panel</b>\n━━━━━━━━━━━━━━━━━━━━\n"
             f"Usage: <code>/miniadminpanel &lt;user_id&gt; [perm1 perm2 ...]</code>\n\n"
             f"📋 <b>Available Permissions:</b>\n{perm_list}\n\n"
             f"Example:\n<code>/miniadminpanel 123456789 generate_key ban_user stats</code>\n\n"
@@ -4033,10 +4110,10 @@ async def cmd_mini_admin_panel(update, context):
                           for p in final_perms) or "  ⚠️ None"
     warn_str=(f"\n⚠️ Unknown perms ignored: <code>{', '.join(bad_perms)}</code>" if bad_perms else "")
     await update.message.reply_text(
-        f"🛡 <b>Mini Admin Added!</b>\n\n"
+        f"🛡 <b>Mini Admin Added!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"👤 Name : <b>{fname_r}</b> @{uname_r}\n🆔 ID   : <code>{target_uid}</code>\n"
-        f"\n🔑 <b>Granted Permissions:</b>\n{perms_str}{warn_str}\n"
-        f"\nThey can now use all granted commands directly.",
+        f"━━━━━━━━━━━━━━━━━━━━\n🔑 <b>Granted Permissions:</b>\n{perms_str}{warn_str}\n"
+        f"━━━━━━━━━━━━━━━━━━━━\nThey can now use all granted commands directly.",
         parse_mode=ParseMode.HTML)
 
     # Build personalized command menu
@@ -4060,10 +4137,10 @@ async def cmd_mini_admin_panel(update, context):
 
     try:
         await context.bot.send_message(chat_id=int(target_uid),parse_mode=ParseMode.HTML,
-            text=f"🛡 <b>Mini Admin Access Granted!</b>\n\n"
+            text=f"🛡 <b>Mini Admin Access Granted!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                  f"You now have Mini Admin access.\n\n"
                  f"🔑 <b>Your Permissions:</b>\n{perms_str}\n\n"
-                 f"\n"
+                 f"━━━━━━━━━━━━━━━━━━━━\n"
                  f"📌 Use /miniadminpanel to view your panel.\n"
                  f"🔄 Restart Telegram if commands don't appear yet.")
     except: pass
@@ -4093,7 +4170,7 @@ async def cmd_mini_admin_list(update, context):
     ma=load_mini_admins()
     if not ma:
         await update.message.reply_text("📭 No mini admins added yet.",parse_mode=ParseMode.HTML); return
-    lines=["🛡 <b>Mini Admin List</b>\n"]
+    lines=["🛡 <b>Mini Admin List</b>\n━━━━━━━━━━━━━━━━━━━━"]
     for uid2,md in ma.items():
         icon="✅" if md.get("active") else "❌"
         perms_s=", ".join(f"<code>{p}</code>" for p in md.get("permissions",[])) or "none"
@@ -4119,15 +4196,15 @@ async def cmd_mini_admin_info(update, context):
     status_s="✅ Active" if md.get("active") else "❌ Revoked"
     perms_s="\n".join(f"  ✅ <code>{p}</code> — {MINI_ADMIN_PERM_MAP.get(p,'')}"
                         for p in md.get("permissions",[])) or "  none"
-    header=(f"🛡 <b>Mini Admin Info</b>\n\n"
+    header=(f"🛡 <b>Mini Admin Info</b>\n━━━━━━━━━━━━━━━━━━━━\n"
             f"👤 Name    : <b>{md.get('first_name','?')}</b> @{md.get('username','?')}\n"
             f"🆔 ID      : <code>{target_uid}</code>\n"
             f"📅 Added   : <code>{md.get('added_at','?')[:10]}</code>\n"
             f"📊 Status  : {status_s}\n"
             f"🔢 Actions : <code>{md.get('total_actions',0)}</code>\n"
-            f"\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
             f"🔑 <b>Permissions:</b>\n{perms_s}\n"
-            f"\n")
+            f"━━━━━━━━━━━━━━━━━━━━\n")
     log_entries=md.get("action_log",[])
     if not log_entries:
         await update.message.reply_text(header+"📭 No actions logged yet.",parse_mode=ParseMode.HTML); return
@@ -4168,13 +4245,13 @@ async def cmd_mini_admin_self_panel(update, context):
         ds=f": <code>{detail[:50]}</code>" if detail else ""
         recent+=f"• <code>{entry.get('action','?')}</code>{ds} ({at})\n"
     await update.message.reply_text(
-        f"🛡 <b>Mini Admin Panel</b>\n\n"
+        f"🛡 <b>Mini Admin Panel</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"👤 Name     : <b>{tg.first_name}</b>\n"
         f"🆔 ID       : <code>{uid}</code>\n"
         f"🔢 Actions  : <code>{total_act}</code>\n"
-        f"\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
         f"🔑 <b>Your Permissions:</b>\n{perms_str}\n"
-        +(f"\n📋 <b>Recent Actions:</b>\n{recent}" if recent else ""),
+        +(f"━━━━━━━━━━━━━━━━━━━━\n📋 <b>Recent Actions:</b>\n{recent}" if recent else ""),
         parse_mode=ParseMode.HTML)
 
 async def cmd_check_all_users(update,context):
@@ -4183,7 +4260,7 @@ async def cmd_check_all_users(update,context):
     ac=sum(1 for u in users.values() if u.get("activated"))
     bc=sum(1 for u in users.values() if u.get("banned"))
     vc=sum(1 for u in users.values() if u.get("vip"))
-    lines=[f"👥 <b>Users ({len(users)})</b>",f"✅{ac}  🚫{bc}  👑{vc}",""]
+    lines=[f"👥 <b>Users ({len(users)})</b>",f"✅{ac}  🚫{bc}  👑{vc}","━━━━━━━━━━━━━━━━━━━━"]
     for uid2,u in sorted(users.items(),key=lambda x:x[1].get("joined",""),reverse=True):
         st="🚫 BANNED" if u.get("banned") else ("👑 VIP" if u.get("vip") else ("✅ Active" if u.get("activated") else "⏳ No Key"))
         exp=f" | {fmt_expiry(u.get('key_expires_at'))}" if u.get("activated") and not u.get("vip") else ""
@@ -4209,18 +4286,18 @@ async def cmd_stats(update,context):
     cds=cfg.get("cooldown_sessions"); cdm=cfg.get("cooldown_minutes",30)
     cd_str=f"{cds} sessions → {cdm}min" if cds else "Off"
     await update.message.reply_text(
-        f"📊 <b>Bot Statistics</b>\n\n"
+        f"📊 <b>Bot Statistics</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"👥 Total Users   : <code>{tu}</code>\n✅ Activated     : <code>{au}</code>\n"
         f"⏰ Expired keys  : <code>{eu}</code>\n🚫 Banned        : <code>{bu}</code>\n👑 VIP           : <code>{vu}</code>\n"
-        f"\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
         f"⚡ Running       : <code>{live}/{MAX_CONCURRENT_CHECKERS}</code> slots\n"
         f"⏳ In queue      : <code>{waiting}</code>\n📋 Total checked : <code>{tc:,}</code>\n"
-        f"\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
         f"🔑 Keys total    : <code>{len(keys)}</code>\n"
         f"🔑 Keys used     : <code>{sum(1 for k in keys.values() if k.get('used_by'))}</code>\n"
-        f"\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
         f"📡 Proxy files   : <code>{len(pf)}</code>  ({tp:,} proxies)\n"
-        f"\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
         f"🔒 Locked        : <code>{'YES 🔴' if cfg.get('locked') else 'No 🟢'}</code>\n"
         f"📊 Regular limit : <code>{cfg.get('global_limit') or 'Unlimited'}</code>\n"
         f"👑 VIP limit     : <code>{cfg.get('vip_limit') or 'Unlimited'}</code>\n"
@@ -4314,7 +4391,7 @@ async def cmd_upload_proxy(update,context):
     uid=str(update.effective_user.id)
     with sessions_lock: active_sessions.setdefault(uid,{}); active_sessions[uid]["awaiting_proxy"]=True
     await update.message.reply_text(
-        "📡 <b>Upload Proxy File</b>\n\nSend a <code>.txt</code> file now.\nOne proxy per line:\n"
+        "📡 <b>Upload Proxy File</b>\n━━━━━━━━━━━━━━━━━━━━\nSend a <code>.txt</code> file now.\nOne proxy per line:\n"
         "<code>host:port</code>\n<code>host:port:user:pass</code>\n<code>http://host:port</code>\n<code>socks5://host:port</code>",
         parse_mode=ParseMode.HTML)
 
@@ -4322,7 +4399,7 @@ async def cmd_upload_proxy(update,context):
 async def cmd_proxy_status(update,context):
     pf=sorted(PROXY_DIR.glob("*.txt"))
     if not pf: await update.message.reply_text("📭 No proxy files.\nUse <code>/upload_proxy</code>.",parse_mode=ParseMode.HTML); return
-    total=0; lines=["📡 <b>Proxy Files</b>\n"]
+    total=0; lines=["📡 <b>Proxy Files</b>\n━━━━━━━━━━━━━━━━━━━━"]
     for p in pf:
         try:
             with open(p,"r",encoding="utf-8",errors="ignore") as f:
@@ -4330,7 +4407,7 @@ async def cmd_proxy_status(update,context):
             sz=p.stat().st_size; ss=f"{sz/1024:.1f}KB" if sz<1024*1024 else f"{sz/1024/1024:.1f}MB"
             total+=cnt; lines.append(f"📄 <code>{p.name}</code>\n   📊 {cnt:,} proxies  ·  {ss}")
         except: lines.append(f"📄 <code>{p.name}</code>  ⚠️ unreadable")
-    lines+=[f"",f"🔢 Total: <code>{total:,}</code> in <code>{len(pf)}</code> file(s)"]
+    lines+=[f"━━━━━━━━━━━━━━━━━━━━",f"🔢 Total: <code>{total:,}</code> in <code>{len(pf)}</code> file(s)"]
     await update.message.reply_text("\n".join(lines),parse_mode=ParseMode.HTML)
 
 @admin_or_mini_admin('removeproxy')
@@ -4338,7 +4415,7 @@ async def cmd_remove_proxy(update,context):
     pf=sorted(PROXY_DIR.glob("*.txt"))
     if not pf:
         await update.message.reply_text("📭 No proxy files.\nUse <code>/upload_proxy</code> to add one.",parse_mode=ParseMode.HTML); return
-    lines=["📡 <b>Proxy Files</b> — tap a button to delete:\n"]
+    lines=["📡 <b>Proxy Files</b> — tap a button to delete:\n━━━━━━━━━━━━━━━━━━━━"]
     btns=[]
     for p in pf:
         try:
@@ -4349,7 +4426,7 @@ async def cmd_remove_proxy(update,context):
         except: lines.append(f"📄 <code>{p.name}</code>  ⚠️ unreadable")
         btns.append([InlineKeyboardButton(f"🗑 Delete  {p.name}",callback_data=f"delproxy_{p.name}")])
     btns.append([InlineKeyboardButton("🗑🗑 Delete ALL proxy files",callback_data="delproxy_ALL")])
-    lines.append(f"\nTotal: <code>{len(pf)}</code> file(s)")
+    lines.append(f"━━━━━━━━━━━━━━━━━━━━\nTotal: <code>{len(pf)}</code> file(s)")
     await update.message.reply_text("\n".join(lines),reply_markup=InlineKeyboardMarkup(btns),parse_mode=ParseMode.HTML)
 
 @admin_or_mini_admin('checkproxy')
@@ -4368,7 +4445,7 @@ async def cmd_check_proxy(update,context):
     if not args:
         if not pf:
             await update.message.reply_text("📭 No proxy files.",parse_mode=ParseMode.HTML); return
-        lines_out=["📡 <b>Proxy Files</b>\n"]
+        lines_out=["📡 <b>Proxy Files</b>\n━━━━━━━━━━━━━━━━━━━━"]
         btns=[]
         for p in pf:
             try:
@@ -4378,7 +4455,7 @@ async def cmd_check_proxy(update,context):
                 lines_out.append(f"📄 <code>{p.name}</code>  ·  {cnt:,} proxies  ·  {ss}")
             except: lines_out.append(f"📄 <code>{p.name}</code>")
             btns.append([InlineKeyboardButton(f"🔍 {p.name}",callback_data=f"chkprx_menu_{p.name}")])
-        lines_out.append("\nTap a file to check it.")
+        lines_out.append("━━━━━━━━━━━━━━━━━━━━\nTap a file to check it.")
         await update.message.reply_text("\n".join(lines_out),
             reply_markup=InlineKeyboardMarkup(btns),parse_mode=ParseMode.HTML)
         return
@@ -4400,7 +4477,7 @@ async def cmd_check_proxy(update,context):
             [InlineKeyboardButton("🔢 Specific line…",callback_data=f"chkprx_askline_{fname}")],
         ])
         await update.message.reply_text(
-            f"📄 <b>{fname}</b>  ·  <code>{total:,}</code> proxies\n\nChoose mode:",
+            f"📄 <b>{fname}</b>  ·  <code>{total:,}</code> proxies\n━━━━━━━━━━━━━━━━━━━━\nChoose mode:",
             reply_markup=kb,parse_mode=ParseMode.HTML)
         return
 
@@ -4416,7 +4493,7 @@ async def cmd_check_proxy(update,context):
             results.append(f"{'✅' if ok_s else '❌'} Line {all_lines.index(ln)+1}: <code>{ln[:55]}</code>")
         working=sum(1 for r in results if r.startswith("✅"))
         out=(f"{'✅' if working==len(sample) else '⚠️' if working>0 else '❌'} <b>{fname}</b> — {working}/{len(sample)} working\n"
-             f"\n"+"\n".join(results))
+             f"━━━━━━━━━━━━━━━━━━━━\n"+"\n".join(results))
         try: await msg.edit_text(out,parse_mode=ParseMode.HTML)
         except: await update.message.reply_text(out,parse_mode=ParseMode.HTML)
         return
@@ -4439,7 +4516,7 @@ async def cmd_check_proxy(update,context):
         tok=len(working_l); pct=int(tok/total*100) if total else 0
         out_lines=[
             f"{'✅' if pct>=80 else '⚠️'} <b>{fname}</b> — {tok}/{total} working ({pct}%)",
-            f"",
+            f"━━━━━━━━━━━━━━━━━━━━",
             f"✅ Working   : <code>{tok:,}</code>",
             f"❌ Dead/Error: <code>{len(dead_l):,}</code>",
         ]
@@ -4448,10 +4525,10 @@ async def cmd_check_proxy(update,context):
             err_ctr2=_Ctr2(err_r for _,_,err_r in dead_l if err_r)
             if err_ctr2:
                 out_lines.append(f"⚠️ Errors: {', '.join(f'{v}x {k}' for k,v in err_ctr2.most_common(4))}")
-            out_lines.append("")
+            out_lines.append("━━━━━━━━━━━━━━━━━━━━")
             dp="\n".join(f"  ❌ Line {i}: <code>{ln[:45]}</code> — {err_r}" for i,ln,err_r in dead_l[:15])
             if len(dead_l)>15: dp+=f"\n  … and {len(dead_l)-15} more"
-            out_lines+=["<b>Dead / Error proxies:</b>",dp,""]
+            out_lines+=["<b>Dead / Error proxies:</b>",dp,"━━━━━━━━━━━━━━━━━━━━"]
         kb2=None
         if dead_l:
             kb2=InlineKeyboardMarkup([
@@ -4475,7 +4552,7 @@ async def cmd_check_proxy(update,context):
         msg=await update.message.reply_text(
             f"🔍 Checking line <code>{line_num}</code> of <code>{fname}</code>…",parse_mode=ParseMode.HTML)
         ok_ln,_=await asyncio.get_event_loop().run_in_executor(None,_test_proxy_sync,ln)
-        out=f"{'✅ Working' if ok_ln else '❌ Dead/Error'}  — Line {line_num}\n\n<code>{ln}</code>"
+        out=f"{'✅ Working' if ok_ln else '❌ Dead/Error'}  — Line {line_num}\n━━━━━━━━━━━━━━━━━━━━\n<code>{ln}</code>"
         try: await msg.edit_text(out,parse_mode=ParseMode.HTML)
         except: await update.message.reply_text(out,parse_mode=ParseMode.HTML)
     except ValueError:
@@ -4492,13 +4569,13 @@ async def cmd_paste_proxy(update,context):
         active_sessions.setdefault(uid,{})
         active_sessions[uid]["awaiting_proxy_paste"]=True
     await update.message.reply_text(
-        "📋 <b>Paste Proxy Lines</b>\n\n"
+        "📋 <b>Paste Proxy Lines</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         "Paste your proxies now (one per line).\n"
         "Supported formats:\n"
         "<code>host:port</code>\n"
         "<code>host:port:user:pass</code>\n"
         "<code>http://host:port</code>\n"
-        "\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
         "I'll save them to a new file in the proxy folder automatically.",
         parse_mode=ParseMode.HTML)
 
@@ -4611,14 +4688,14 @@ async def cmd_refresh(update,context):
     thr=cfg.get("default_threads",5)
     mc=cfg.get("max_concurrent",5)
     await update.message.reply_text(
-        f"🔄 <b>Bot Refreshed!</b>\n\n"
+        f"🔄 <b>Bot Refreshed!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"📡 Proxy        : {proxy_status}\n"
         f"📊 Regular limit: <code>{gl}</code>\n"
         f"👑 VIP limit    : <code>{vl}</code>\n"
         f"🧵 Threads      : <code>{thr}</code>\n"
         f"⚡ Max concurrent: <code>{mc}</code>\n"
         f"🔒 Locked       : <code>{'Yes 🔴' if cfg.get('locked') else 'No 🟢'}</code>\n"
-        f"\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
         f"⚡ Running: <code>{live}</code> active session(s)",
         parse_mode=ParseMode.HTML)
 
@@ -4640,11 +4717,11 @@ async def cmd_stop_checking(update,context):
         [InlineKeyboardButton(f"🎯 Stop One User…",                  callback_data="admstop_oneuser")],
     ])
     await update.message.reply_text(
-        f"⛔ <b>Stop Checking</b>\n\n"
+        f"⛔ <b>Stop Checking</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"⚡ Running  : <code>{len(running)}</code>\n"
         f"👑 VIP      : <code>{vip_cnt}</code>\n"
         f"👤 Non-VIP  : <code>{nvip_cnt}</code>\n"
-        f"\nChoose who to stop:",
+        f"━━━━━━━━━━━━━━━━━━━━\nChoose who to stop:",
         reply_markup=kb, parse_mode=ParseMode.HTML)
 
 
@@ -4667,11 +4744,11 @@ async def cmd_continue_checking(update,context):
         [InlineKeyboardButton(f"🎯 Continue One User…",             callback_data="admcont_oneuser")],
     ])
     await update.message.reply_text(
-        f"▶️ <b>Continue Checking</b>\n\n"
+        f"▶️ <b>Continue Checking</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"⏸ Admin-stopped : <code>{len(stopped)}</code>\n"
         f"👑 VIP           : <code>{vip_cnt}</code>\n"
         f"👤 Non-VIP       : <code>{nvip_cnt}</code>\n"
-        f"\nChoose who to continue:",
+        f"━━━━━━━━━━━━━━━━━━━━\nChoose who to continue:",
         reply_markup=kb, parse_mode=ParseMode.HTML)
 
 
@@ -4682,7 +4759,7 @@ async def cmd_stop_for_user(update,context):
         running=[(uid2,dict(s)) for uid2,s in active_sessions.items() if s.get("status")=="checking"]
     if not running:
         await update.message.reply_text("📭 No active sessions.",parse_mode=ParseMode.HTML); return
-    users_db=load_users(); lines=["⛔ <b>Stop a User</b>\n"]; btns=[]
+    users_db=load_users(); lines=["⛔ <b>Stop a User</b>\n━━━━━━━━━━━━━━━━━━━━"]; btns=[]
     for uid2,s in running:
         udata=users_db.get(uid2,{}); uname=udata.get("username","?"); fname_u=udata.get("first_name","?")
         vip_tag="👑" if udata.get("vip") else "👤"
@@ -4914,7 +4991,7 @@ async def cmd_refresh_combo(update,context):
         if is_checking: resume_count+=1
 
     await msg.edit_text(
-        f"✅ <b>Combo Refresh Done!</b>\n\n"
+        f"✅ <b>Combo Refresh Done!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"📤 Sent to users : <code>{sent_count}</code> file(s)\n"
         f"🗑 Deleted       : <code>{del_count}</code> file(s)\n"
         f"⚠️ Stopped       : <code>{resume_count}</code> active session(s)",
@@ -5019,7 +5096,7 @@ async def cmd_refresh_results(update,context):
                 except: pass
 
     await msg.edit_text(
-        f"✅ <b>Results Refresh Done!</b>\n\n"
+        f"✅ <b>Results Refresh Done!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"📤 Sent to users  : <code>{sent_count}</code> result zip(s)\n"
         f"🗑 Deleted old    : <code>{del_count}</code> folder(s)\n"
         f"⚡ Still checking : <code>{resumed}</code> session(s) untouched",
@@ -5036,7 +5113,7 @@ async def cmd_check_running(update,context):
     if not running:
         await update.message.reply_text("📭 No active checking sessions.",parse_mode=ParseMode.HTML); return
     users_db=load_users()
-    lines=[f"⚡ <b>Running Sessions ({len(running)})</b>\n"]
+    lines=[f"⚡ <b>Running Sessions ({len(running)})</b>\n━━━━━━━━━━━━━━━━━━━━"]
     for uid2,s in running:
         udata=users_db.get(uid2,{}); uname=udata.get("username","?"); fname=udata.get("first_name","?")
         combo=Path(s.get("file","")).name if s.get("file") else "N/A"
@@ -5084,13 +5161,13 @@ def _admin_status_text(cfg, users):
     with sessions_lock:
         live = sum(1 for s in active_sessions.values() if s.get("status")=="checking")
     lock_s = "🔴 ON" if cfg.get("locked") else "🟢 OFF"
-    return (f"⚙️ <b>Admin Panel</b>\n\n"
+    return (f"⚙️ <b>Admin Panel</b>\n━━━━━━━━━━━━━━━━━━━━\n"
             f"👥 Users  : <code>{len(users)}</code>  ✅{ac}  🚫{bc}  👑{vc}\n"
             f"⚡ Live   : <code>{live}/{MAX_CONCURRENT_CHECKERS}</code> slots\n"
             f"🔒 Lock   : {lock_s}\n"
             f"📊 Limit  : <code>{cfg.get('global_limit') or 'Unlimited'}</code>  "
             f"👑<code>{cfg.get('vip_limit') or 'Unlimited'}</code>\n"
-            f"\nChoose a section:")
+            f"━━━━━━━━━━━━━━━━━━━━\nChoose a section:")
 
 def _admin_keys_kb():
     return InlineKeyboardMarkup([
@@ -5343,11 +5420,11 @@ async def cmd_send_data(update, context):
         except Exception as e:
             failed.append(f"<code>{fpath.name}</code> — {str(e)[:60]}")
 
-    result = (f"✅ <b>Data Files Sent!</b>\n\n"
+    result = (f"✅ <b>Data Files Sent!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
               f"📤 Sent    : <code>{sent}</code> file(s)\n")
     if failed:
         result += f"❌ Failed  : <code>{len(failed)}</code>\n" + "\n".join(failed)
-    result += (f"\n\n"
+    result += (f"\n━━━━━━━━━━━━━━━━━━━━\n"
                f"💡 Use /replacefile to restore any of these files.")
     await msg.edit_text(result, parse_mode=ParseMode.HTML)
 
@@ -5382,10 +5459,10 @@ async def cmd_replace_file(update, context):
             + (f"  ({f.stat().st_size/1024:.1f} KB)" if f.exists() else "  (missing)")
             for name, f in REPLACEABLE.items())
         await update.message.reply_text(
-            f"📥 <b>Replace File — Ready!</b>\n\n"
+            f"📥 <b>Replace File — Ready!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
             f"Just send any of these files directly now:\n\n"
             f"{file_list}\n\n"
-            f"\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
             f"✅ The filename is auto-detected from what you send.\n"
             f"💾 Current file is backed up as <code>filename.json.bak</code> automatically.\n\n"
             f"🔴 Type /cancel_replace to abort.",
@@ -5418,9 +5495,9 @@ async def cmd_replace_file(update, context):
         info = f"\n📄 Current size: <code>{sz_str}</code>"
 
     await update.message.reply_text(
-        f"📥 <b>Ready to Replace</b>\n\n"
+        f"📥 <b>Ready to Replace</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         f"🎯 Target  : <code>{fname}</code>{info}\n"
-        f"\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
         f"⚠️ <b>Send your <code>{fname}</code> file now.</b>\n"
         f"💾 Backed up as <code>{fname}.bak</code> automatically.\n\n"
         f"🔴 /cancel_replace to abort.",
@@ -5465,9 +5542,9 @@ async def cmd_set_commands(update, context):
     ]
     admin_cmds2 = user_cmds2 + [
         BotCommand("admin",          "⚙️ Admin panel"),
-        BotCommand("generatekey",   "🔑 Generate a key"),
-        BotCommand("removekey",     "🗑 Remove key(s)"),
-        BotCommand("banuser",       "🚫 Ban a user"),
+        BotCommand("generate_key",   "🔑 Generate a key"),
+        BotCommand("remove_key",     "🗑 Remove key(s)"),
+        BotCommand("ban_user",       "🚫 Ban a user"),
         BotCommand("unban_user",     "✅ Unban a user"),
         BotCommand("addvip",         "👑 Add VIP"),
         BotCommand("removevip",      "👑 Remove VIP"),
@@ -5551,11 +5628,11 @@ async def cmd_set_commands(update, context):
             except Exception as e:
                 errors.append(f"reseller <code>{rs_uid}</code>: {str(e)[:50]}")
         text = (
-            f"✅ <b>Command menu updated!</b>\n\n"
+            f"✅ <b>Command menu updated!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
             f"✅ Your menu now shows all admin commands.\n"
             f"👥 Users see basic commands only.\n"
             f"🏪 Resellers updated: <code>{reseller_ok}</code>\n"
-            f"\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
             f"ℹ️ Close and reopen the chat if menu hasn't changed."
         )
         if errors:
@@ -5603,7 +5680,7 @@ def main():
                         await application.bot.send_message(
                             chat_id=int(cid2), parse_mode=ParseMode.HTML,
                             text=(f"⚠️ <b>Session Recovery Failed</b>\n"
-                                  f"\n"
+                                  f"━━━━━━━━━━━━━━━━━━━━\n"
                                   f"Hi <b>{fname2}</b>, the bot restarted but your combo "
                                   f"file was not found.\nPlease upload your file again via /start."))
                     except: pass
@@ -5636,7 +5713,7 @@ def main():
                                 await application.bot.send_message(
                                     chat_id=int(cid2), parse_mode=ParseMode.HTML,
                                     text=(f"✅ <b>Session Already Complete</b>\n"
-                                          f"\n"
+                                          f"━━━━━━━━━━━━━━━━━━━━\n"
                                           f"Hi <b>{fname2}</b>, your previous session had already "
                                           f"finished all <code>{rem2:,}</code> lines before the bot "
                                           f"restarted.\n\n"
@@ -5709,7 +5786,7 @@ def main():
                     smsg2=await application.bot.send_message(
                         chat_id=int(cid2), parse_mode=ParseMode.HTML,
                         text=(f"⚡ <b>Auto-Resuming!</b>\n"
-                              f"\n"
+                              f"━━━━━━━━━━━━━━━━━━━━\n"
                               f"👤 Hi <b>{fname2}</b>{'  @'+uname2 if uname2 else ''}\n"
                               f"📁 File       : <code>{combo2.name}</code>\n"
                               f"📊 Total lines: <code>{saved_orig:,}</code>\n"
@@ -5717,7 +5794,7 @@ def main():
                               f"✅ Pre-crash hits: <code>{prev_hits:,}</code> (preserved)\n"
                               f"⭐ Level      : {cl2_label}\n"
                               f"🔍 Filter     : {clf2_label}\n"
-                              f"\n"
+                              f"━━━━━━━━━━━━━━━━━━━━\n"
                               f"🎯 Hits sent here live!\n📊 /check  ⏹ /stop"))
                     smsg2_id = smsg2.message_id if smsg2 else None
                     if smsg2: track(uid2, smsg2_id)
