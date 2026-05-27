@@ -1,0 +1,38 @@
+{
+  "8499404621": {
+    "username": "Laranasnafrozen",
+    "first_name": "LARANAS",
+    "banned": false,
+    "vip": false,
+    "activated": true,
+    "total_checked": 672,
+    "sessions_count": 1,
+    "sessions_since_cd": 1,
+    "last_cd_at": null,
+    "key_used": "ywrlds-0DE2E018-8867",
+    "key_expires_at": null,
+    "joined": "2026-05-27T04:56:36.314591",
+    "last_seen": "2026-05-27T06:02:33.971322",
+    "activated_at": "2026-05-27T05:00:16.290504",
+    "key_expired": false,
+    "hits_notif": true
+  },
+  "5026584015": {
+    "username": "Josephbm_69",
+    "first_name": "\ud835\ude45\ud835\ude4a\ud835\ude4e\ud835\ude40\ud835\ude4b\ud835\ude43",
+    "banned": false,
+    "vip": false,
+    "activated": true,
+    "total_checked": 0,
+    "sessions_count": 0,
+    "sessions_since_cd": 0,
+    "last_cd_at": null,
+    "key_used": "ywrlds-3A74F97B-1DD6",
+    "key_expires_at": null,
+    "joined": "2026-05-27T05:54:59.628425",
+    "last_seen": "2026-05-27T05:55:54.511009",
+    "activated_at": "2026-05-27T05:55:06.326743",
+    "key_expired": false,
+    "hits_notif": true
+  }
+}
